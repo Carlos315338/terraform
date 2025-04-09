@@ -1,9 +1,13 @@
-# ECS Cluster
+# ======================================
+# Módulo ECS - Recursos completos ECS
+# ======================================
+
+# Cluster ECS
 resource "aws_ecs_cluster" "backend_cluster" {
   name = "backend-fargate-cluster"
 }
 
-# IAM Role for ECS Task Execution
+# IAM Role para ECS Task Execution
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 
@@ -27,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Task Definition
+# Task Definition para el contenedor backend
 resource "aws_ecs_task_definition" "backend_task" {
   family                   = "backend-task"
   network_mode            = "awsvpc"
@@ -39,7 +43,7 @@ resource "aws_ecs_task_definition" "backend_task" {
   container_definitions = jsonencode([
     {
       name  = "backend-container"
-      image = aws_ecr_repository.cosmeticos-belleza-infinita.repository_url
+      image = var.image_uri
       essential = true
       portMappings = [
         {
@@ -51,17 +55,17 @@ resource "aws_ecs_task_definition" "backend_task" {
   ])
 }
 
-# Security Group para el servicio ECS
+# Security Group para el backend ECS
 resource "aws_security_group" "ecs_sg" {
   name        = "ecs-backend-sg"
   description = "Allow only internal access"
-  vpc_id      = "<tu-vpc-id>" # reemplazar
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/16"] # solo acceso interno desde la VPC
+    cidr_blocks = [var.vpc_cidr_block]
   }
 
   egress {
@@ -72,7 +76,7 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-# Servicio ECS en Fargate
+# Servicio ECS sobre Fargate
 resource "aws_ecs_service" "backend_service" {
   name            = "backend-fargate-service"
   cluster         = aws_ecs_cluster.backend_cluster.id
@@ -81,9 +85,10 @@ resource "aws_ecs_service" "backend_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = ["<subnet-id-1>", "<subnet-id-2>"] # reemplazar
+    subnets         = var.subnet_ids
     assign_public_ip = false
     security_groups  = [aws_security_group.ecs_sg.id]
   }
+
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_policy]
 }
