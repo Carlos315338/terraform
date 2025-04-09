@@ -68,7 +68,7 @@ terraform destroy
 
 ### Destruir solo la base de datos
 ```bash
-terraform destroy -target=aws_db_instance.mysql
+terraform destroy -target=aws_db_instance.mysql -target=aws_db_subnet_group.mysql_subnet_group
 ```
 
 ---
